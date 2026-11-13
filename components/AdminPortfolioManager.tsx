@@ -1,0 +1,10 @@
+"use client";
+import {useEffect,useState} from "react";
+import {getSupabaseBrowserClient} from "@/lib/supabase";
+type Investment={id:string;investor_email:string;project_name:string;division:string;opportunity_id:string|null;source_deposit_id:string|null;amount:number;currency:string;annual_rate:number;day_count_basis:number;terms_reference:string;status:string;activated_at:string|null;created_at:string};
+export default function AdminPortfolioManager(){
+ const [rows,setRows]=useState<Investment[]>([]),[message,setMessage]=useState("");
+ async function load(){const db=getSupabaseBrowserClient();if(!db)return;const {data,error}=await db.rpc("admin_list_auto_investment_allocations");if(error){setMessage("Investment records could not be loaded.");return;}setRows((data||[]) as Investment[]);}
+ useEffect(()=>{void load()},[]);
+ return <div className="admin-portfolio-manager"><section className="admin-panel"><div className="admin-panel-head"><div><h3>Investment portfolio</h3><p>Approved deposits are automatically divided equally across the eight website investment divisions. This register shows the resulting investment allocations.</p></div><button className="admin-secondary" onClick={()=>void load()}>Refresh</button></div>{message&&<p className="admin-help" role="status">{message}</p>}{rows.length===0?<div className="admin-empty">No automatic investment allocations have been recorded.</div>:<div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Investment division</th><th>Investor</th><th>Allocated amount</th><th>Annual rate</th><th>Status</th><th>Activated</th><th>Deposit reference</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><b>{r.division||r.project_name}</b><small>{r.terms_reference}</small></td><td>{r.investor_email}</td><td>{r.currency} {Number(r.amount).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>{Number(r.annual_rate).toFixed(2)}% · {r.day_count_basis} days</td><td>{r.status}</td><td>{r.activated_at?new Date(r.activated_at).toLocaleString():"—"}</td><td>{r.source_deposit_id||"—"}</td></tr>)}</tbody></table></div>}</section></div>;
+}

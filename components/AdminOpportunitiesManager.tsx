@@ -1,0 +1,11 @@
+"use client";
+import {useEffect,useState} from "react";
+import {getSupabaseBrowserClient} from "@/lib/supabase";
+const allowedStatuses=["Draft","Under Review","Active","Paused","Closed","Archived"];
+export default function AdminOpportunitiesManager(){
+ const [rows,setRows]=useState<any[]>([]),[message,setMessage]=useState(""),[allowed,setAllowed]=useState(false),[busy,setBusy]=useState<string|null>(null);
+ async function load(){const db=getSupabaseBrowserClient();if(!db)return;const [access,result]=await Promise.all([db.rpc("crystal_admin_access"),db.from("investment_opportunities").select("id,title,division,summary,currency,supported_currencies,status,terms_version").order("division")]);setAllowed(access.data?.role==="Supa Admin"||access.data?.permissions?.opportunities===true);if(result.error){setMessage("Unable to load investment divisions.");return;}setRows(result.data||[]);}
+ useEffect(()=>{void load()},[]);
+ async function change(id:string,status:string){if(!allowed)return;const db=getSupabaseBrowserClient();if(!db)return;setBusy(id);const {error}=await db.rpc("admin_update_opportunity_status",{p_opportunity_id:id,p_status:status});setBusy(null);if(error){setMessage(error.message);return;}setMessage("Investment division status updated.");await load();}
+ return <section className="admin-panel"><div className="admin-panel-head"><div><h3>Investment divisions</h3><p>The eight website divisions are the fixed destinations for automatic equal allocation. All eight must be Active and support the deposit currency before a deposit can be approved and invested.</p></div></div>{message&&<p className="admin-help" role="status">{message}</p>}<div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Division</th><th>Supported currencies</th><th>Terms version</th><th>Status</th>{allowed&&<th>Update</th>}</tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><b>{r.title}</b><small>{r.summary}</small></td><td>{(r.supported_currencies||[r.currency]).join(", ")}</td><td>{r.terms_version||"Not set"}</td><td>{r.status}</td>{allowed&&<td><select aria-label={`Status for ${r.title}`} value={r.status} disabled={busy===r.id} onChange={e=>void change(r.id,e.target.value)}>{allowedStatuses.map(s=><option key={s}>{s}</option>)}</select></td>}</tr>)}</tbody></table></div></section>;
+}

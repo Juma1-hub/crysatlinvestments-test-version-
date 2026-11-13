@@ -1,0 +1,10 @@
+"use client";
+import {useEffect,useState} from "react";
+import {getSupabaseBrowserClient} from "@/lib/supabase";
+export default function AdminDistributionsManager(){
+ const [rows,setRows]=useState<any[]>([]),[message,setMessage]=useState("");
+ async function load(){const db=getSupabaseBrowserClient();if(!db)return;const {data,error}=await db.rpc("admin_list_investment_distributions");if(error){setMessage("Unable to load distribution records.");return;}setRows(data||[]);}
+ useEffect(()=>{void load()},[]);
+ async function update(id:string,status:string){if(!window.confirm(`Mark this distribution ${status.toLowerCase()}?`))return;const db=getSupabaseBrowserClient();if(!db)return;const {error}=await db.rpc("admin_update_distribution_status",{p_distribution_id:id,p_status:status});if(error){setMessage(error.message);return;}setMessage(`Distribution marked ${status}.`);await load();}
+ return <section className="admin-panel"><div className="admin-panel-head"><div><h3>Investment distributions</h3><p>Review recorded distributions linked to investor allocations.</p></div></div>{message&&<p className="admin-help" role="status">{message}</p>}{rows.length===0?<div className="admin-empty">No distribution records are available.</div>:<div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Investor</th><th>Investment</th><th>Amount</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><b>{r.investor_name}</b><small>{r.investor_email}</small></td><td>{r.project_name}</td><td>{r.currency} {Number(r.amount).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>{new Date(r.distribution_date).toLocaleDateString()}</td><td>{r.status}</td><td className="admin-row-actions">{r.status==="Draft"&&<button onClick={()=>void update(r.id,"Approved")}>Approve</button>}{r.status==="Approved"&&<button onClick={()=>void update(r.id,"Paid")}>Mark paid</button>}{["Draft","Approved"].includes(r.status)&&<button onClick={()=>void update(r.id,"Cancelled")}>Cancel</button>}</td></tr>)}</tbody></table></div>}</section>;
+}
