@@ -94,3 +94,13 @@ This ZIP must not be described as a fully operational financial-services release
 4. Re-enable the financial actions only after those workflows pass tests and the user approves the migration.
 5. Complete the remaining Supabase-backed modules, push notifications and provider integrations.
 6. Install dependencies, run the full typecheck, production build and database/RLS tests, then deploy to a staging Vercel environment.
+
+
+## Authentication and persistence update (15 November 2026)
+
+- Added `/forgot-password` and `/reset-password` routes using Supabase Auth email recovery and `updateUser({ password })`.
+- Added password setup/recovery entry from administrator sign-in. First-time admins use the existing provisioned Supabase Auth identity and active `crystal_admin_memberships` row; no separate browser-only admin password is created.
+- Added redirect URL and Preview/Production environment setup notes to `SUPABASE-SETUP.md`.
+- Removed browser storage for the PWA dismissal preference and investor currency preference mirror. Currency preference remains in `investor_profiles` in Supabase.
+- Replaced the market-conditions localStorage prototype with Supabase RPC calls and added forward-only migration `202611150002_market_conditions_supabase.sql`. This migration has not been executed.
+- Financial approvals, automatic allocations and withdrawals remain fail-closed because the known live database records do not reconcile and the current withdrawal path does not yet implement the approved reservation plus proportional eight-division principal reduction. Do not enable or manually change existing financial records until live schema, migration history and audit evidence have been inspected.

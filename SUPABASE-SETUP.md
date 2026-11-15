@@ -56,3 +56,12 @@ This phase connects Supabase Auth and basic investor profiles. Deposits, withdra
 Use the exact order and security instructions in `SECURITY-AND-SETUP.md`. In particular, run migrations 003, 004 and 005 after the already completed investor profile and referral migrations. Do not run the older alternate `202611110002_financial_and_admin_foundation.sql` on this migration path.
 
 The admin workspace requires Supabase Auth, an active administrator membership and verified TOTP multi-factor authentication. Supa Admin-only financial-rate and role-management operations are also checked by database functions.
+
+
+## Password recovery and first administrator password
+
+- The investor and administrator sign-in screens use the same Supabase Auth identity system. Administrators do not get a separate browser-only password.
+- A first-time administrator must already have an Auth user and an active row in `crystal_admin_memberships` provisioned by the authorised Supa Admin/database operator. The administrator then opens `/admin/login` and selects **Set your first password or recover access**. Supabase emails a one-time recovery link; the administrator sets their password at `/reset-password`.
+- Existing users can use `/forgot-password`. The recovery link returns to `/reset-password`, where Supabase Auth validates the recovery session before `updateUser({ password })` is called.
+- In Supabase **Authentication → URL Configuration → Redirect URLs**, allow the exact deployed Preview and Production origins with `/reset-password`, for example `https://YOUR-PREVIEW-DOMAIN.vercel.app/reset-password` and `https://YOUR-PRODUCTION-DOMAIN/reset-password`. Also set the Site URL to the production origin. Do not use a wildcard redirect in production.
+- Configure Supabase email delivery/SMTP and verify the sender domain. Without the two public Supabase environment variables in the Vercel Preview environment and a working email provider, sign-in, registration and recovery cannot complete. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` for Preview and Production, then redeploy. Never put a service-role key in browser code.
