@@ -1,11 +1,10 @@
 "use client";
-import {useEffect,useState} from "react";
-import {TrendingUp,Wallet} from "lucide-react";
-import {getSupabaseBrowserClient} from "@/lib/supabase";
-import {CurrencyValue} from "./CurrencyValue";
-type BalanceRow={currency:string;available_balance:number;invested_capital:number;accumulated_interest:number;total_account_value:number};
-export default function InvestorLiveOverview(){
- const [rows,setRows]=useState<BalanceRow[]>([]);
- useEffect(()=>{let live=true;const maybeClient=getSupabaseBrowserClient();if(!maybeClient)return;const client=maybeClient as NonNullable<typeof maybeClient>;async function load(){await client.rpc("investor_accrue_daily_earnings");const {data,error}=await client.rpc("investor_get_account_balances");if(live&&!error)setRows((data||[]) as BalanceRow[])}void load();const timer=window.setInterval(()=>void load(),60_000);const onFocus=()=>{if(document.visibilityState==="visible")void load()};document.addEventListener("visibilitychange",onFocus);const channel=client.channel("investor-account-ledger").on("postgres_changes",{event:"*",schema:"public",table:"investor_ledger_entries"},()=>void load()).subscribe();return()=>{live=false;window.clearInterval(timer);document.removeEventListener("visibilitychange",onFocus);void client.removeChannel(channel)}},[]);
- return <section className="investor-grid" aria-label="Investment and account balances">{rows.map(r=><article className="portal-card income-panel" key={r.currency}><div className="card-heading"><div><span className="eyebrow">ACCOUNT BALANCE</span><h3>{r.currency} account</h3></div><TrendingUp size={20}/></div><div className="admin-metric-row"><span>Available balance</span><b><CurrencyValue amount={Number(r.available_balance)} sourceCurrency={r.currency}/></b></div><div className="admin-metric-row"><span>Investment capital</span><b><CurrencyValue amount={Number(r.invested_capital)} sourceCurrency={r.currency}/></b></div><div className="admin-metric-row"><span>Accumulated interest</span><b><CurrencyValue amount={Number(r.accumulated_interest)} sourceCurrency={r.currency}/></b></div><div className="admin-metric-row"><span>Total account value</span><b><CurrencyValue amount={Number(r.total_account_value)} sourceCurrency={r.currency}/></b></div></article>)}{rows.length===0&&<article className="portal-card"><div className="card-heading"><div><span className="eyebrow">ACCOUNT BALANCE</span><h3>Account balances</h3></div><Wallet size={20}/></div><p>No account balances are available yet.</p></article>}</section>;
+import { ShieldCheck } from "lucide-react";
+export default function InvestorLiveOverview() {
+  return <section className="investor-grid" aria-label="Investor account values">
+    <article className="portal-card income-panel" style={{ gridColumn: "1 / -1" }}>
+      <div className="card-heading"><div><span className="eyebrow">ACCOUNT VALUES</span><h3>Financial reconciliation in progress</h3></div><ShieldCheck size={20}/></div>
+      <p>Account balances and earnings will be displayed once the existing deposit, allocation and ledger records have been reconciled and verified. No estimated or unreconciled balance is shown here.</p>
+    </article>
+  </section>;
 }
