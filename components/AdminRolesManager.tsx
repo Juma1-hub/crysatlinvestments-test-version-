@@ -101,7 +101,9 @@ export default function AdminRolesManager() {
     setBusy(false);
     if (error) { setMessage(`Permissions were not changed: ${error.message}. Confirm the latest permissions migration has been applied.`); return; }
     setMessage(`Permissions saved for ${selected.email}. Revoked permissions are no longer available to that administrator.`);
-    await load();
+    await load(false);
+    setSelectedId("");
+    setDraft({});
   }
   const activeAdmins = rows.filter(r => r.is_active);
   return <section className="admin-panel admin-permissions-manager">
