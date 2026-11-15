@@ -12,7 +12,7 @@ export default function Register(){
   async function submit(e:FormEvent<HTMLFormElement>){
     e.preventDefault();const formElement=e.currentTarget;setError("");setMessage("");setBusy(true);
     const supabase=getSupabaseBrowserClient();
-    if(!supabase){setError("Investor registration is not configured yet. Please contact the site administrator.");setBusy(false);return;}
+    if(!supabase){setError("Registration is temporarily unavailable. Please try again later.");setBusy(false);return;}
     const form=new FormData(e.currentTarget);
     const fullName=String(form.get("fullName")||"").trim();
     const email=String(form.get("email")||"").trim().toLowerCase();

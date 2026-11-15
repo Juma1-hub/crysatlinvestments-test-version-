@@ -3,8 +3,6 @@ import { useEffect, useState } from "react";
 import { Download, X } from "lucide-react";
 
 type InstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
-function wasDismissed() { try { return localStorage.getItem("crystal_pwa_dismissed") === "1"; } catch { return false; } }
-function markDismissed() { try { localStorage.setItem("crystal_pwa_dismissed", "1"); } catch { /* Storage may be disabled; the prompt still dismisses for this session. */ } }
 export default function PWAInstaller() {
   const [installEvent, setInstallEvent] = useState<InstallPromptEvent | null>(null);
   const [visible, setVisible] = useState(false);
@@ -12,12 +10,12 @@ export default function PWAInstaller() {
   useEffect(() => {
     if ("serviceWorker" in navigator) void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
     const standalone = window.matchMedia("(display-mode: standalone)").matches || ("standalone" in navigator && Boolean((navigator as Navigator & { standalone?: boolean }).standalone));
-    if (standalone || wasDismissed()) return;
+    if (standalone) return;
     const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
     setIos(isIos);
     const timer = window.setTimeout(() => setVisible(true), 6500);
     const onBeforeInstall = (event: Event) => { event.preventDefault(); setInstallEvent(event as InstallPromptEvent); setVisible(true); };
-    const onInstalled = () => { setVisible(false); setInstallEvent(null); markDismissed(); };
+    const onInstalled = () => { setVisible(false); setInstallEvent(null); };
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
     window.addEventListener("appinstalled", onInstalled);
     return () => { window.clearTimeout(timer); window.removeEventListener("beforeinstallprompt", onBeforeInstall); window.removeEventListener("appinstalled", onInstalled); };
@@ -26,10 +24,10 @@ export default function PWAInstaller() {
     if (!installEvent) return;
     await installEvent.prompt();
     const choice = await installEvent.userChoice;
-    if (choice.outcome === "accepted") { setVisible(false); markDismissed(); }
+    if (choice.outcome === "accepted") { setVisible(false); }
     setInstallEvent(null);
   }
-  function dismiss() { setVisible(false); markDismissed(); }
+  function dismiss() { setVisible(false); }
   if (!visible) return null;
   return <aside className="pwa-install-banner" role="dialog" aria-label="Install CRYSTAL INVESTMENTS app">
     <div className="pwa-install-copy"><span className="pwa-install-icon"><Download size={19}/></span><div><strong>Take CRYSTAL with you</strong><p>{installEvent ? "Install the app for quick access from your device." : ios ? "Add this website to your Home Screen using your browser’s Share menu, then choose Add to Home Screen." : "You can install this web app from your browser menu for quick access."}</p></div></div>

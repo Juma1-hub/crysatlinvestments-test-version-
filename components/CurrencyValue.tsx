@@ -3,8 +3,7 @@ import { useEffect, useState } from "react";
 export function CurrencyValue({ amount = 0, sourceCurrency = "KES" }: { amount?: number; sourceCurrency?: string }) {
   const [displayCurrency, setDisplayCurrency] = useState("KES");
   useEffect(() => {
-    const sync = () => setDisplayCurrency(localStorage.getItem("crystal_account_currency") || "KES");
-    sync();
+    const sync = (event: Event) => { const value = (event as CustomEvent<string>).detail; if (value) setDisplayCurrency(value); };
     window.addEventListener("crystal-currency-change", sync);
     return () => window.removeEventListener("crystal-currency-change", sync);
   }, []);
