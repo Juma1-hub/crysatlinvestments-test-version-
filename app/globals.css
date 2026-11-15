@@ -466,3 +466,14 @@
 @media(max-width:700px){.pwa-install-banner{right:12px;bottom:12px;width:calc(100vw - 24px);padding:13px}.permission-grid{grid-template-columns:1fr}.permission-editor{padding:15px}.permission-editor-heading{flex-direction:column}.admin-permission-toolbar{width:100%}}
 
 .footer-legal-context{max-width:900px;margin:0 auto 16px;color:rgba(255,255,255,.58);font-size:11px;line-height:1.6;text-align:center}
+
+
+/* Structured permissions and referral tables */
+.permission-matrix-wrap { margin-top: 1rem; }
+.permission-matrix td, .permission-matrix th { vertical-align: middle; }
+.permission-table-toggle { display: inline-flex; align-items: center; gap: .55rem; cursor: pointer; white-space: nowrap; }
+.permission-table-toggle input { width: 18px; height: 18px; accent-color: #9a7a42; cursor: pointer; }
+.permission-table-toggle span { font-size: .82rem; font-weight: 600; }
+.referral-panel .admin-table-wrap { width: 100%; overflow-x: auto; }
+.referral-panel .admin-table { min-width: 560px; }
+.admin-financial-table { min-width: 900px; }
