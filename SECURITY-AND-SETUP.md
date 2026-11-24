@@ -1,53 +1,66 @@
 # CRYSTAL INVESTMENTS — security and connection checklist
 
-## Supabase migration
+## Mandatory security rules
 
-Apply SQL in this order in the Supabase SQL Editor:
+### 1. Secret management
+- Never put Supabase service-role keys, database passwords, M-Pesa Daraja consumer secrets, callback secrets, SMTP credentials, signing keys or other private credentials in browser code or any `NEXT_PUBLIC_*` variable.
+- Keep secrets only in the hosting provider's encrypted server-side environment-variable store (Vercel/Render) or a private backend secret store. A local `.env.local` is for local development only.
+- `.env`, `.env.*` are ignored by Git; `.env.example` is the only environment file intended for source control and contains placeholders/public configuration only.
+- Rotate any secret that was ever committed, pasted into a public place, or exposed in a browser bundle. Deleting the file from the latest commit is not enough.
+- Browser Supabase access uses only the publishable/anon key. That key is not a secret; RLS is the security boundary.
 
-1. `202611110001_initial_investor_profiles.sql` (already reported successful).
-2. `202611110002_referral_program.sql` (already reported successful).
-3. `202611110003_central_backend_and_referral_admin.sql`.
-4. `202611120004_interest_support_and_admin_controls.sql`.
-5. `202611120005_contact_admin_security.sql`.
-6. `202611130006_financial_ledger_and_account_balances.sql` (includes a targeted drop/recreate of the existing `admin_list_investment_allocations()` RPC because its OUT-column return type changed).
+### 2. Database authorization and IDOR protection
+- Never trust a browser-supplied investor ID, admin role, permission, balance, status, amount, or ownership claim.
+- Every private read/write must derive the actor from the verified Supabase Auth JWT (`auth.uid()`) and check row ownership or an active `crystal_admin_memberships` role/permission in database policies/RPCs.
+- Use deny-by-default RLS on every table exposed through the Data API. Review `USING` and `WITH CHECK` clauses for SELECT/INSERT/UPDATE/DELETE separately.
+- Financial/admin mutations run through narrow, audited database RPCs with explicit authorization checks. No direct client writes to ledger, earnings, allocations, payouts, role memberships, or audit records.
+- Test investor A cannot read or mutate investor B's records by changing IDs; test Junior Admins cannot call Super Admin actions by bypassing the UI.
 
-**Do not run `202611110002_financial_and_admin_foundation.sql` on top of this migration path.** It is an older alternate schema with overlapping table names and a different admin-membership model. Applying it can create schema conflicts.
+### 3. Authentication and administrator MFA
+- Supabase Auth is the only authentication/password/session/recovery system. Do not implement custom password hashing, session tokens, or password reset logic.
+- Require verified email, strong password policy, and TOTP MFA for all administrators. Sensitive admin RPCs must require an AAL2 JWT on the database side.
+- Use Supabase's supported password reset and email verification flows. Protect recovery endpoints with CAPTCHA and provider rate limits.
 
-Run each remaining migration once, in order. Keep the SQL Editor success result and check the Supabase table list afterwards.
+### 4. Server-side validation and injection protection
+- Validate every incoming value at the trusted boundary: data type, range, length, enum, currency, phone format, and allowed characters. Repeat critical validation in the database RPC; browser validation is usability only.
+- Use parameterized Supabase query builders or PostgreSQL function parameters. Never concatenate user input into SQL strings or execute user-supplied SQL.
+- Escape/render user-generated text safely. Do not inject untrusted content with `dangerouslySetInnerHTML`.
+- Amounts, investor IDs, roles, provider status, ledger outcomes and effective timestamps are determined or rechecked server-side.
 
-## Administrator access and MFA
+### 5. HTTPS and transport security
+- Production requests over HTTP are redirected to HTTPS. Production responses set HSTS and standard browser security headers.
+- Use a valid TLS certificate at the hosting provider and keep the custom domain's DNS/TLS configuration valid. Do not publish payment or login forms on an HTTP origin.
 
-- The admin workspace checks the signed-in Supabase account against `crystal_admin_memberships`.
-- Active Junior Admins see only modules granted in their permission map.
-- Only Supa Admins can manage administrator roles or annual interest rates.
-- The last active Supa Admin cannot be demoted or removed.
-- Every administrator must enrol an authenticator app (TOTP) before accessing the admin workspace.
-- Rate changes and administrator role changes require an AAL2 session; the database rejects the action if MFA has not been verified.
-- Supa Admin can appoint/promote/demote/remove roles. Role changes are written to the audit log.
+### 6. WAF, DDoS and rate limiting
+- Put the production domain behind Cloudflare proxy (orange-cloud) and enable managed WAF rules, DDoS protection and bot protections.
+- Configure Cloudflare rate-limit rules for `/login`, `/register`, `/forgot-password`, `/reset-password`, `/admin/login`, and sensitive `/api/*` routes. Start with a conservative per-IP threshold (for example, 5 authentication attempts per minute) and tune against legitimate traffic. Return 429 and apply a temporary challenge/block for repeated abuse.
+- Also enable Supabase Auth CAPTCHA and configure the Auth rate limits in the Supabase Dashboard. Cloudflare is not a substitute for database authorization.
+- Do not implement rate limiting with an in-memory process map in serverless functions; it is not shared across instances and can be bypassed by scaling/restarts. Use Cloudflare edge rules or a shared atomic rate-limit store for application endpoints.
+- Keep contact-form/database RPC rate limits enabled and audited.
 
-In Supabase Dashboard, enable **Authentication → Multi-Factor Authentication → TOTP**. Require verified email addresses and configure strong password policy. Keep recovery codes securely offline. Do not share the Supabase service-role key or database password with the browser.
+## Environment variables
 
-## Contact and administrator conversations
+Only browser-safe public Supabase configuration may use `NEXT_PUBLIC_`:
 
-The public contact form writes to `crystal_support_messages` through a rate-limited database function. Enquiries are visible in the administrator Support Inbox. The contact function limits repeat submissions from the same email address; also enable Supabase CAPTCHA protection in Authentication settings before opening the site publicly.
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or legacy anon key)
 
-The administrator conversation area is restricted by database policy to active administrator memberships. It is not visible to investor accounts.
+Private provider credentials, Supabase service-role key, database password, SMTP credentials and callback secrets must use server-side-only environment variable names without `NEXT_PUBLIC_`. Do not add real values to `.env.example` or source control.
 
-## Exchange rates
+## Current project implementation notes
 
-The investor dashboard retrieves current KES-based rates from the exchange-rate service and refreshes its in-memory cache hourly. The selected display currency changes how amounts are shown; stored balances, allocations and transactions retain their original currency. If rates are unavailable, converted amounts display as unavailable rather than inventing a rate. The exchange-rate timestamp is available on each converted amount by hovering/tapping its value.
+- `.gitignore` excludes `.env` and `.env.*`, while allowing `.env.example`.
+- `lib/supabase.ts` uses only the publishable/anon key in the browser; it must never accept a service-role key.
+- Supabase Auth remains responsible for login and recovery. Database RLS/RPC checks remain authoritative for access.
+- Middleware keeps the public site unpublished unless `CRYSTAL_SITE_PUBLISHED=true`, redirects production HTTP to HTTPS, and sets security headers.
+- Database migration policies/RPCs are the authority for financial/admin permissions. Do not replace them with UI-only hiding.
 
-## Payment and financial controls
+## Deployment checklist (complete before public testing)
 
-Deposit and withdrawal forms submit authenticated requests to Supabase. They do not execute payments or transfer funds. Payment execution, reconciliation, investor allocation activation and withdrawal settlement must be connected to an approved provider and authorised operating arrangements before live use. Approval of a request alone must not be treated as a completed transfer or an activated investment.
-
-Annual rate accruals are recorded in the database against active allocations. The rate entered by Supa Admin must match the relevant signed opportunity/investor terms and must not be described as guaranteed returns unless legally approved.
-
-## Before public launch
-
-- Configure SMTP and email confirmation.
-- Enable CAPTCHA and review Auth rate limits.
-- Review RLS policies and test with separate investor, Junior Admin and Supa Admin accounts.
-- Verify TOTP enrolment, role escalation, last-Supa-Admin protection and audit logs.
-- Configure backups, monitoring, alerting and incident recovery.
-- Complete legal and regulatory approvals, payment-provider onboarding and independent security review.
+1. Add production secrets only in the hosting provider's encrypted environment settings; verify no secret is in Git history or browser bundles.
+2. Enable verified email, TOTP MFA, CAPTCHA and Auth rate limits in Supabase.
+3. Attach the domain to Cloudflare, enable proxy, managed WAF and DDoS protections, and configure rate limits for the routes above.
+4. Confirm the hosting platform enforces valid TLS; test HTTP redirects and HSTS.
+5. Run cross-account IDOR tests for investor records and role-escalation tests for Junior Admins.
+6. Test validation with malformed IDs, oversized strings, invalid KES amounts, invalid Kenyan phone numbers, duplicate idempotency keys and hostile text payloads.
+7. Review RLS policies, function grants, audit logs, backups and recovery procedures before enabling real-money operations.

@@ -1,48 +1,86 @@
-# CRYSTAL INVESTMENTS — implementation notes
+# CRYSTAL INVESTMENTS — implementation notes (24 November 2026)
 
-## Changes in this revision
+## Source archive and workflow
 
-- Added a custom geometric crystal SVG mark and applied it to the public header, footer, investor portal and admin console.
-- Added home-page scroll reveal effects with reduced-motion support.
-- Added sector-specific photographic backgrounds to the home-page division cards and investment division detail pages.
-- Updated header and footer investor actions to show Investor's Dash and Log out after a session is active.
-- Added a required Terms & Conditions acceptance checkbox to registration and created a Terms & Conditions page.
-- Added a potential partner/institution section and a separate regulatory reference section in the footer. Names are presented as potential relationships/reference institutions only; no affiliation, partnership, licence or endorsement is claimed. The displayed marks are typographic identifiers, not official supplied logo artwork.
-- Expanded the admin navigation with market conditions, platform settings and system diagnostics sections.
-- Added admin investment allocation workflow: an allocation must be covered by approved deposits net of approved withdrawals and existing allocations; it then moves through Pending approval, Approved and Active.
-- Added daily and cumulative simple-accrual estimates to the investor dashboard. Accrual begins only after an allocation is activated and uses the recorded annual rate and 360/365 day-count basis. Multiple currencies are kept separate.
-- Added source, timestamp and sentiment fields for administrator-published market observations.
-- Added clearly labelled illustrative portfolio examples in the admin portfolio area.
-- Corrected monthly contribution chart grouping so currencies are not combined and each currency is scaled separately.
+- Current source of truth: `crysatlinvestments-test-version--main.zip`, uploaded 23 November 2026.
+- Use the active Next.js app under `app/` and `components/`. Root-level historical prototype files are not the active production application.
+- Keep CRYSTAL INVESTMENTS separate from SUPA AI.
+- Supabase is the sole authoritative backend. Preserve existing financial records. Do not use local browser storage for account, admin, financial, settings or market records.
+- Never request or expose Supabase service-role keys, passwords or provider secrets in chat or browser code.
+- Work one step at a time and inspect the live schema before database changes.
 
-## Important platform limitations
+## Existing frontend retained
 
-This repository currently has no configured server-side authentication, database, payment integration, market-data API, secure document store, or backend authorization policies. The current account, admin, market and investment records still use browser local storage. Therefore:
+- Public corporate site, division pages, contact/legal pages, investor login/registration and investor dashboard. The eight public investment divisions are now read from the Supabase public RPC rather than a hard-coded page list; editable public copy is read through an allow-listed Supabase RPC.
+- Responsive investor navigation and public header/footer branding.
+- Admin console with analytics, investors, roles, KYC, opportunities, portfolio, deposits, withdrawals, distributions, team/branches, reports/audit, website content, market conditions, platform settings, system health, interest rates, support and admin conversations.
+- PWA manifest, service worker and install assets. Public routes are 404-gated until `CRYSTAL_SITE_PUBLISHED=true`; admin setup and password recovery remain available.
+- Supabase authentication/profile reads and database RPC usage.
 
-- Admin role changes and admin controls are not secure production access controls.
-- Investor passwords are not securely validated by a server.
-- Records are not shared across devices or users and are not authoritative financial ledgers.
-- Market observations are administrator-entered, not a live market feed.
-- Income figures are browser-calculated estimates based on the entered annual rate and simple day-count formula; they are not official or guaranteed entitlements.
-- Deposits and withdrawals are records only; no money is moved by this interface.
-- Contact form delivery is not connected to an email or CRM service.
+## Changes made in this revision
 
-Do not use this frontend-only workflow to accept, custody, allocate or promise investor funds or returns. Production use requires secure backend implementation, legal/regulatory review, verified project terms, payment/custody arrangements, audit controls and server-side authorization.
+### Investor and public UI
 
-## Revision 2 — dashboard, layout and admin controls
+- New account currency is fixed to KES; country defaults to Kenya.
+- Kenyan phone validation accepts `+254`, `07` and `01` formats.
+- No USD/GBP currency selectors remain in active app/components. Historic USD/GBP transactions continue to display in their original currency where returned by Supabase.
+- Investor dashboard always includes a KES account card; an empty KES account displays zero values. A failed balance RPC displays an error rather than a misleading zero.
+- Dashboard includes latest recorded daily income and cumulative recorded daily income.
+- M-Pesa deposit action calls the server-side `mpesa-stk-push` Edge Function. The UI does not claim payment is confirmed when a prompt is merely sent.
+- Withdrawal submission remains paused while balance reservations, proportional principal reduction, payout confirmation and historical reconciliation are incomplete.
 
-- Investor dashboard currency selection now drives dashboard totals, daily income, accrued income, available balance, investment rows and transaction amounts. Cross-currency display uses indicative live KES-base rates from open.er-api.com; if rates are unavailable, cross-currency values are shown as unavailable rather than mislabelled or silently treated as the selected currency.
-- Added a Home destination to the investor dashboard, including the expanded mobile navigation.
-- Removed the explanatory sub-lines beneath the dashboard balance metrics.
-- Reworked investor dashboard colours to a light neutral palette and improved mobile navigation, spacing, responsive metric sizing and overflow handling.
-- Replaced the partner and regulator text marks with compact circular organization-domain icons. Removed the explanatory paragraphs beneath these logo sections; section headings remain neutral and do not state that the organizations are partners or that any regulator has approved the company.
-- Reduced image brightness through stronger overlays and lower image quality settings; replaced the mining image with a mining-specific photograph.
-- Removed visible sequence numbering from public investment/process cards and changed public feature cards to open, border-light editorial layouts.
-- Added working browser-workspace forms for Platform Settings and Website Content. Saved settings update the public footer; saved homepage, about and opportunities copy updates those pages.
-- Investor registration now reads the default account currency from Platform Settings.
+### Admin UI
 
-### Scope and verification notes
-- Admin settings/content and investor records remain browser-local because this project revision has no connected production database or secure server-side admin service. They do not synchronize across devices or users. This revision does not make the admin workspace a secure production control plane.
-- Currency conversion is indicative and depends on the external exchange-rate endpoint being reachable. It is not an accounting or settlement rate; official financial records should retain their original transaction currency and authoritative rates.
-- Partner/regulator marks are loaded from the organizations' domain favicons through Google's favicon service; they are not downloaded high-resolution trademark master files. The neutral section labels avoid claiming endorsement or licensing.
-- Production build was not run: dependency installation timed out in this environment. TypeScript/JSX transpilation syntax check passed for all source files.
+- Admin financial approval actions remain paused pending resolution of unmatched historic deposit/withdrawal records and installation of the integrated eight-division workflow.
+- Portfolio UI remains read-only while allocation functions are fail-closed.
+- Distribution manager separates Draft approval, cancellation and payout confirmation. It does not offer an unverified Mark Paid action.
+- Manual distribution payout confirmation requires provider reference, a verification note and AAL2; the backend writes status, ledger credit and audit evidence atomically.
+- Super Admin transaction processing controls keep manual verification always on and automatic mode off until a verified provider adapter is registered.
+- The eight investment divisions are seeded as Draft KES opportunities and can be activated only through the audited admin RPC after terms/risk disclosures are reviewed.
+- Investor KYC document uploads use a private Supabase Storage bucket; only the owner and KYC-authorized reviewers can read the file. Review status changes require the audited AAL2 RPC.
+- Branch records use permission-checked RPCs; the Deactivate action retains the branch row instead of deleting it.
+- Supa Admin Clear view actions clear only the current frontend display for audit, recent activity, support inbox and admin conversations; they never delete database rows.
+- Admin financial summaries show amounts by recorded currency rather than silently converting historic USD/GBP records into KES.
+
+### Supabase backend additions
+
+`supabase/migrations/202611240001_live_security_and_processing_controls.sql` is an incremental migration draft for the existing database. It:
+
+- Unifies old admin helper functions on `crystal_admin_memberships`.
+- Removes broad financial RLS policies and authenticated direct financial writes, including distribution TRUNCATE.
+- Enforces KES for new financial rows while allowing status updates to existing historic USD/GBP rows without changing their currency.
+- Enforces KES-only investment opportunity metadata.
+- Adds M-Pesa provider request metadata and an Edge Function verification event table.
+- Adds interest-rate save-at-server-time logic, time-weighted Kenya-local daily accrual, rate segment metadata and investor daily-income summary.
+- Restricts new referral commissions to verified interest earnings at 20% and audits manual commission review.
+- Adds distribution approval/cancellation and provider/manual payout confirmation functions with idempotent ledger posting.
+- Adds processing mode settings; manual verification is mandatory, automatic processing is provider-gated and currently off.
+- Keeps risky legacy financial approval, allocation, withdrawal and on-demand accrual RPCs fail-closed until reconciliation and integrated controls are complete.
+
+## Provider integration source
+
+- `supabase/functions/mpesa-stk-push` initiates an STK prompt after authenticating the investor and creating a pending KES request.
+- `supabase/functions/mpesa-callback` performs a Daraja STK Query, matches callback metadata to the request, and records provider verification evidence. It does not approve the deposit or post a ledger credit.
+- `supabase/functions/crystal-daily-accrual` protects the service-role accrual RPC with a separate cron secret.
+- Deployments and secrets are documented in `supabase/functions/README.md` and `LIVE-DATABASE-DEPLOYMENT.md`.
+- No bank payout adapter or fully automatic deposit/withdrawal approval adapter is included.
+
+## Verification status
+
+- TypeScript/JSX syntax transpilation: 56 source files parsed, zero syntax diagnostics.
+- Project-rule static checks: 23/23 passed.
+- `npm install` timed out in this environment; `node_modules` was not installed, so `npm run build` and full type-check could not be completed.
+- SQL migration was not executed or PostgreSQL-parsed in this environment. It remains a review draft.
+- No Supabase schema, settings, payment, investor, ledger or financial records have been changed by this work.
+
+## Outstanding blockers
+
+1. Independently reconcile the KES 7 trillion approved deposit with the originating bank/provider.
+2. Independently reconcile the KES 7 approved withdrawal and determine whether an actual payout occurred.
+3. Test the incremental migration on a clone of the live DB, not a fresh-install DB.
+4. Deploy and sandbox-test M-Pesa Edge Functions with credentials held only in Supabase secrets.
+5. Configure and verify the daily accrual scheduler.
+6. Complete and independently review eight-division deposit allocation, reserved-balance withdrawal, payout and referral commission payment workflows before enabling financial mutations.
+7. Run a full production build and end-to-end tests after dependencies can be installed.
+
+No production deployment or database migration should be performed until the user explicitly approves the reviewed plan and all preflight checks pass.
