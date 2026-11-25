@@ -7,6 +7,7 @@ type AdminRow = { user_id: string; email: string; role: "Supa Admin" | "Junior A
 type Permission = { key: string; label: string; description: string; group: string };
 const permissions: Permission[] = [
   { key: "overview", label: "Overview", description: "View the limited administrator landing page.", group: "Workspace" },
+  { key: "system_health", label: "System health", description: "View non-secret operational status and security controls.", group: "Workspace" },
   { key: "analytics", label: "Analytics", description: "View approved financial activity summaries.", group: "Workspace" },
   { key: "investors", label: "Investor management", description: "View and edit investor profile information.", group: "Investor services" },
   { key: "kyc", label: "KYC & compliance", description: "Review submitted identity and compliance records.", group: "Investor services" },
@@ -21,6 +22,7 @@ const permissions: Permission[] = [
   { key: "platform_settings", label: "Platform settings", description: "Edit permitted non-financial platform settings.", group: "Company operations" },
   { key: "market_conditions", label: "Market conditions", description: "Publish sourced market observations.", group: "Company operations" },
   { key: "support", label: "Support inbox", description: "Respond to and manage investor support enquiries.", group: "Company operations" },
+  { key: "admin_conversations", label: "Admin conversations", description: "Read and send private administrator messages.", group: "Company operations" },
   { key: "reports", label: "Reports & audit", description: "View permitted reports and audit records.", group: "Governance" },
   { key: "admin_conversations", label: "Admin conversations", description: "Access private administrator conversations.", group: "Governance" },
   { key: "system_health", label: "Platform health", description: "View system diagnostics and operational health.", group: "Governance" },
@@ -35,7 +37,7 @@ export default function AdminRolesManager() {
   const selected = useMemo(() => rows.find(r => r.user_id === selectedId && r.role === "Junior Admin"), [rows, selectedId]);
   async function load(keepSelection = true) {
     const db = getSupabaseBrowserClient();
-    if (!db) { setMessage("Supabase is not configured. Administrator permissions cannot be loaded."); return; }
+    if (!db) { setMessage("Administrator permissions are temporarily unavailable."); return; }
     setBusy(true);
     const { data, error } = await db.rpc("admin_list_memberships");
     setBusy(false);
@@ -54,7 +56,7 @@ export default function AdminRolesManager() {
     const email = window.prompt("Enter the email address of an existing registered account to appoint as Junior Admin:");
     if (!email?.trim()) return;
     const db = getSupabaseBrowserClient();
-    if (!db) { setMessage("Supabase is not configured."); return; }
+    if (!db) { setMessage("Administrator services are temporarily unavailable."); return; }
     setBusy(true);
     const { error } = await db.rpc("admin_set_membership", { p_email: email.trim().toLowerCase(), p_role: "Junior Admin", p_permissions: {} });
     setBusy(false);
@@ -92,14 +94,14 @@ export default function AdminRolesManager() {
   async function save() {
     if (!selected) return;
     const db = getSupabaseBrowserClient();
-    if (!db) { setMessage("Supabase is not configured."); return; }
+    if (!db) { setMessage("Administrator services are temporarily unavailable."); return; }
     const { data: assurance, error: assuranceError } = await db.auth.mfa.getAuthenticatorAssuranceLevel();
     if (assuranceError || assurance?.currentLevel !== "aal2") { setMessage("For security, complete multi-factor authentication before changing administrator permissions."); return; }
     const payload = Object.fromEntries(permissions.map(p => [p.key, draft[p.key] === true]));
     setBusy(true);
     const { error } = await db.rpc("admin_update_junior_permissions", { p_user_id: selected.user_id, p_permissions: payload });
     setBusy(false);
-    if (error) { setMessage(`Permissions were not changed: ${error.message}. Confirm the latest permissions migration has been applied.`); return; }
+    if (error) { setMessage(`Permissions were not changed: ${error.message}. Please refresh and try again.`); return; }
     setMessage(`Permissions saved for ${selected.email}. Revoked permissions are no longer available to that administrator.`);
     await load(false);
     setSelectedId("");
@@ -107,7 +109,7 @@ export default function AdminRolesManager() {
   }
   const activeAdmins = rows.filter(r => r.is_active);
   return <section className="admin-panel admin-permissions-manager">
-    <div className="admin-panel-head"><div><h3>Administrator access & permissions</h3><p>Choose a Junior Admin, then tick only the modules and actions they need. Changes are saved to Supabase and enforced by database authorization.</p></div><div className="admin-permission-toolbar"><button className="admin-secondary" type="button" onClick={() => void load()} disabled={busy}><RefreshCw size={15}/> Refresh</button><button className="admin-primary" type="button" onClick={appoint} disabled={busy}><UserPlus size={15}/> Appoint Junior Admin</button></div></div>
+    <div className="admin-panel-head"><div><h3>Administrator access & permissions</h3><p>Choose a Junior Admin, then tick only the modules and actions they need. Changes are securely saved and enforced by administrator permissions.</p></div><div className="admin-permission-toolbar"><button className="admin-secondary" type="button" onClick={() => void load()} disabled={busy}><RefreshCw size={15}/> Refresh</button><button className="admin-primary" type="button" onClick={appoint} disabled={busy}><UserPlus size={15}/> Appoint Junior Admin</button></div></div>
     {message && <p className="admin-help" role="status">{message}</p>}
     <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Administrator account</th><th>Role</th><th>Status</th><th>Permissions</th><th>Role actions</th></tr></thead><tbody>{activeAdmins.map(row => <tr key={row.user_id} className={row.user_id === selectedId ? "permission-selected-row" : ""}><td><b>{row.email}</b></td><td>{row.role}</td><td>{row.is_active ? "Active" : "Inactive"}</td><td>{row.role === "Supa Admin" ? <span className="admin-pill">Full control</span> : <button type="button" className="admin-secondary" onClick={() => { setSelectedId(row.user_id); setDraft({ ...(row.permissions || {}) }); }}>Manage permissions</button>}</td><td className="admin-row-actions"><button type="button" className="admin-secondary" disabled={busy} onClick={() => void changeRole(row)}>{row.role === "Supa Admin" ? "Demote" : "Promote"}</button><button type="button" className="admin-secondary" disabled={busy} onClick={() => void removeAccess(row)}>Remove access</button></td></tr>)}</tbody></table></div>
     {selected ? <div className="permission-editor"><div className="permission-editor-heading"><div><span className="eyebrow">JUNIOR ADMIN PERMISSIONS</span><h4>{selected.email}</h4><p>Untick any permission to revoke it. Supa Admin-only controls, including role management and global interest-rate changes, cannot be delegated here.</p></div><button type="button" className="admin-primary" onClick={save} disabled={busy}><Save size={16}/>{busy ? "Saving…" : "Save permissions"}</button></div>

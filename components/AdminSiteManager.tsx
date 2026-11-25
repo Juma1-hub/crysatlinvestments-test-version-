@@ -20,38 +20,38 @@ export default function AdminSiteManager({ mode }: { mode: "settings" | "content
     let active = true;
     (async () => {
       const db = getSupabaseBrowserClient();
-      if (!db) { if (active) setSaved("Supabase is not configured. Website settings are unavailable until the database connection is configured."); return; }
-      const { data, error } = await db.from("crystal_site_configuration").select("config_key,config_value").in("config_key", ["platform_settings", "website_content"]);
+      if (!db) { if (active) setSaved("Website settings are temporarily unavailable."); return; }
+      const key = mode === "settings" ? "platform_settings" : "website_content";
+      const { data, error } = await db.rpc("admin_get_site_configuration", { p_key: key });
       if (!active) return;
       if (error) { setSaved(`Could not load saved website configuration: ${error.message}`); return; }
-      const settingsRow = data?.find(row => row.config_key === "platform_settings");
-      const contentRow = data?.find(row => row.config_key === "website_content");
-      if (settingsRow?.config_value) setSettings({ ...defaultSettings, ...(settingsRow.config_value as Partial<SiteSettings>) });
-      if (contentRow?.config_value) setContent({ ...defaultContent, ...(contentRow.config_value as Partial<SiteContent>) });
+      if (mode === "settings" && data) setSettings({ ...defaultSettings, ...(data as Partial<SiteSettings>), defaultCurrency: "KES" });
+      if (mode === "content" && data) setContent({ ...defaultContent, ...(data as Partial<SiteContent>) });
     })();
     return () => { active = false; };
-  }, []);
+  }, [mode]);
   async function save(key: "platform_settings" | "website_content", value: SiteSettings | SiteContent) {
     const db = getSupabaseBrowserClient();
-    if (!db) { setSaved("Supabase is not configured. Nothing has been saved."); return; }
+    if (!db) { setSaved("Unable to save these settings. Please try again."); return; }
     setBusy(true); setSaved("");
-    const { error } = await db.rpc("admin_save_site_configuration", { p_key: key, p_value: value });
+    const safeValue = key === "platform_settings" ? { ...(value as SiteSettings), defaultCurrency: "KES" } : value;
+    const { error } = await db.rpc("admin_save_site_configuration", { p_key: key, p_value: safeValue });
     setBusy(false);
-    if (error) { setSaved(`Could not save to Supabase: ${error.message}`); return; }
-    setSaved(key === "platform_settings" ? "Platform settings saved to Supabase." : "Website content saved to Supabase.");
+    if (error) { setSaved(`Could not save these settings: ${error.message}`); return; }
+    setSaved(key === "platform_settings" ? "Platform settings saved." : "Website content saved.");
     window.dispatchEvent(new Event("crystal-site-configuration-change"));
   }
   function submitSettings(e: FormEvent<HTMLFormElement>) { e.preventDefault(); void save("platform_settings", settings); }
   function submitContent(e: FormEvent<HTMLFormElement>) { e.preventDefault(); void save("website_content", content); }
-  if (mode === "settings") return <section className="admin-panel admin-site-manager"><h3>Platform settings</h3><p className="admin-help">Changes are stored in the central Supabase configuration, not in this browser.</p><form className="admin-site-form" onSubmit={submitSettings}>
+  if (mode === "settings") return <section className="admin-panel admin-site-manager"><h3>Platform settings</h3><p className="admin-help">Changes are securely saved and available across the platform.</p><form className="admin-site-form" onSubmit={submitSettings}>
     <label>Investor relations email<input type="email" value={settings.contactEmail} onChange={e => setSettings({ ...settings, contactEmail: e.target.value })} placeholder="investors@yourdomain.com"/></label>
     <label>Contact telephone<input value={settings.contactPhone} onChange={e => setSettings({ ...settings, contactPhone: e.target.value })} placeholder="+254 ..."/></label>
     <label>Headquarters<input value={settings.headquarters} onChange={e => setSettings({ ...settings, headquarters: e.target.value })}/></label>
-    <label>Default account currency<select value={settings.defaultCurrency} onChange={e => setSettings({ ...settings, defaultCurrency: e.target.value })}><option>KES</option><option>USD</option><option>GBP</option></select></label>
+    <label>Default account currency<input value="KES" readOnly/></label>
     <label className="wide-field">Footer tagline<input value={settings.footerTagline} onChange={e => setSettings({ ...settings, footerTagline: e.target.value })}/></label>
     <button className="admin-primary" type="submit" disabled={busy}>{busy ? "Saving…" : "Save platform settings"}</button>
   </form>{saved && <p className="admin-help" role="status">{saved}</p>}</section>;
-  return <section className="admin-panel admin-site-manager"><h3>Website content</h3><p className="admin-help">Approved content is stored centrally in Supabase.</p><form className="admin-site-form" onSubmit={submitContent}>
+  return <section className="admin-panel admin-site-manager"><h3>Website content</h3><p className="admin-help">Approved content is securely saved and published across the platform.</p><form className="admin-site-form" onSubmit={submitContent}>
     <label>Homepage eyebrow<input value={content.homeEyebrow} onChange={e => setContent({ ...content, homeEyebrow: e.target.value })}/></label>
     <label className="wide-field">Homepage introduction<textarea rows={3} value={content.homeDescription} onChange={e => setContent({ ...content, homeDescription: e.target.value })}/></label>
     <label className="wide-field">About page introduction<textarea rows={3} value={content.aboutIntro} onChange={e => setContent({ ...content, aboutIntro: e.target.value })}/></label>

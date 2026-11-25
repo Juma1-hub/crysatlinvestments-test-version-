@@ -477,3 +477,9 @@
 .referral-panel .admin-table-wrap { width: 100%; overflow-x: auto; }
 .referral-panel .admin-table { min-width: 560px; }
 .admin-financial-table { min-width: 900px; }
+
+/* Fixed KES account display: no alternative transaction currency selector. */
+.currency-fixed{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border:1px solid var(--line,#dedbd3);border-radius:10px;background:#fff;font-weight:700;color:var(--ink,#242424)}
+.processing-toggle{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;font-size:13px}
+.processing-toggle input{width:17px;height:17px;accent-color:#a98242}
+.admin-daily-bars{display:grid;gap:10px;padding:8px 0}.admin-daily-bar-row{display:grid;grid-template-columns:76px minmax(80px,1fr) 34px;gap:12px;align-items:center;font-size:13px}.admin-daily-bar-row>span{color:var(--muted,#777)}.admin-daily-bar-row>b{text-align:right;font-variant-numeric:tabular-nums}.admin-daily-bar-track{height:10px;border-radius:99px;background:#eee9df;overflow:hidden}.admin-daily-bar-track i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#b28a4c,#d9bd83)}
