@@ -16,6 +16,11 @@ const nextConfig: NextConfig = {
       headers: securityHeaders,
     }];
   },
+  async rewrites() {
+    const supabaseUrl = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/$/, "");
+    if (!supabaseUrl) return [];
+    return [{ source: "/auth/v1/:path*", destination: `${supabaseUrl}/auth/v1/:path*` }];
+  },
 };
 
 export default nextConfig;

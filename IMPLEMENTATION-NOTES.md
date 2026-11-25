@@ -1,4 +1,4 @@
-# CRYSTAL INVESTMENTS — implementation notes (24 November 2026)
+# CRYSTAL INVESTMENTS — implementation notes (25 November 2026)
 
 ## Source archive and workflow
 
@@ -27,16 +27,16 @@
 - Investor dashboard always includes a KES account card; an empty KES account displays zero values. A failed balance RPC displays an error rather than a misleading zero.
 - Dashboard includes latest recorded daily income and cumulative recorded daily income.
 - M-Pesa deposit action calls the server-side `mpesa-stk-push` Edge Function. The UI does not claim payment is confirmed when a prompt is merely sent.
-- Withdrawal submission remains paused while balance reservations, proportional principal reduction, payout confirmation and historical reconciliation are incomplete.
+- Withdrawal submission checks ledger-backed account value and existing reservations. Approval reserves the amount; payout completion requires a separate manually verified provider reference and evidence note.
 
 ### Admin UI
 
-- Admin financial approval actions remain paused pending resolution of unmatched historic deposit/withdrawal records and installation of the integrated eight-division workflow.
-- Portfolio UI remains read-only while allocation functions are fail-closed.
+- Admin deposit approval calls the new AAL2-protected review RPC and atomically posts a ledger credit plus eight equal allocations. Withdrawal approval reserves funds; manual payout confirmation posts the debit only after external payment verification.
+- Portfolio UI displays the automatically generated eight-division allocations; no manual principal-edit action is exposed.
 - Distribution manager separates Draft approval, cancellation and payout confirmation. It does not offer an unverified Mark Paid action.
 - Manual distribution payout confirmation requires provider reference, a verification note and AAL2; the backend writes status, ledger credit and audit evidence atomically.
 - Super Admin transaction processing controls keep manual verification always on and automatic mode off until a verified provider adapter is registered.
-- The eight investment divisions are seeded as Draft KES opportunities and can be activated only through the audited admin RPC after terms/risk disclosures are reviewed.
+- The eight agreed divisions are activated by the 25 November test migration, with their division-level risk disclosures retained. Final project-specific disclosures must be reviewed before publication.
 - Investor KYC document uploads use a private Supabase Storage bucket; only the owner and KYC-authorized reviewers can read the file. Review status changes require the audited AAL2 RPC.
 - Branch records use permission-checked RPCs; the Deactivate action retains the branch row instead of deleting it.
 - Supa Admin Clear view actions clear only the current frontend display for audit, recent activity, support inbox and admin conversations; they never delete database rows.
@@ -55,7 +55,7 @@
 - Restricts new referral commissions to verified interest earnings at 20% and audits manual commission review.
 - Adds distribution approval/cancellation and provider/manual payout confirmation functions with idempotent ledger posting.
 - Adds processing mode settings; manual verification is mandatory, automatic processing is provider-gated and currently off.
-- Keeps risky legacy financial approval, allocation, withdrawal and on-demand accrual RPCs fail-closed until reconciliation and integrated controls are complete.
+- Keeps legacy financial RPCs revoked and exposes new, separately permissioned manual review and payout RPCs. The daily accrual worker is service-role-only and its allocation variable reference is corrected in the follow-on migration.
 
 ## Provider integration source
 
@@ -65,19 +65,19 @@
 - Deployments and secrets are documented in `supabase/functions/README.md` and `LIVE-DATABASE-DEPLOYMENT.md`.
 - No bank payout adapter or fully automatic deposit/withdrawal approval adapter is included.
 
-## Verification status
+## Verification status (updated 25 November)
 
-- TypeScript/JSX syntax transpilation: 56 source files parsed, zero syntax diagnostics.
-- Project-rule static checks: 23/23 passed.
+- TypeScript/JSX syntax transpilation: 102 source files parsed, zero syntax diagnostics.
+- Project-rule static checks: 45/45 passed.
 - `npm install` timed out in this environment; `node_modules` was not installed, so `npm run build` and full type-check could not be completed.
 - SQL migration was not executed or PostgreSQL-parsed in this environment. It remains a review draft.
 - No Supabase schema, settings, payment, investor, ledger or financial records have been changed by this work.
 
 ## Outstanding blockers
 
-1. Independently reconcile the KES 7 trillion approved deposit with the originating bank/provider.
-2. Independently reconcile the KES 7 approved withdrawal and determine whether an actual payout occurred.
-3. Test the incremental migration on a clone of the live DB, not a fresh-install DB.
+1. Test the 24 November security migration and 25 November financial workflow migration on a clone of the live database, not a fresh-install DB.
+2. Preserve the existing KES 7 trillion deposit and KES 7 withdrawal rows; do not automatically post or reverse either. Use a separate authorised audit process if the ledger later needs reconciliation.
+3. Configure and test M-Pesa and bank provider integrations after the core manual workflows pass staging tests.
 4. Deploy and sandbox-test M-Pesa Edge Functions with credentials held only in Supabase secrets.
 5. Configure and verify the daily accrual scheduler.
 6. Complete and independently review eight-division deposit allocation, reserved-balance withdrawal, payout and referral commission payment workflows before enabling financial mutations.

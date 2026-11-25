@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "check:project-rules": "node scripts/check-project-rules.mjs"
+    "check:project-rules": "node scripts/check-project-rules.mjs",
+    "test:cloudflare-rate-limit": "node --test cloudflare/tests/*.test.mjs"
   },
   "dependencies": {
     "next": "15.5.28",

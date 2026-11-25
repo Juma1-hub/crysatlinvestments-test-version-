@@ -11,21 +11,22 @@
 - [x] Referral calculation restricted to verified interest earnings only.
 - [x] Annual rate save is effective at the exact server save timestamp; daily accrual function supports intraday rate splits and Kenya-local completed days.
 - [x] Investor dashboard displays latest recorded daily income and cumulative recorded daily income.
-- [x] Eight agreed investment divisions are seeded as Draft, KES-only opportunities; no division is activated automatically.
+- [x] Eight agreed investment divisions are activated for the unpublished test site, KES-only; final project-specific disclosures are required before public launch.
 - [x] Admin opportunity status changes use a permission-checked, MFA-protected, audited RPC.
 - [x] Clear view controls for admin activity, audit, inbox and conversations affect only frontend display; they do not delete database records.
-- [x] Eight-division rule and proportional allocation rule documented; financial approval remains paused until live schema/reconciliation supports it.
-- [x] KES deposit and withdrawal submissions use idempotency keys; withdrawal submissions also use server-side available-balance and reservation checks. Approval/payout remain paused pending historical reconciliation.
+- [x] Manual deposit approval atomically creates one ledger credit and eight equal division allocations.
+- [x] KES deposit and withdrawal submissions use idempotency keys; withdrawal submissions use ledger-backed available balance and reservation checks.
+- [x] Withdrawal approval reserves funds; payout confirmation separately posts a debit after provider reference and independent evidence are recorded.
 - [x] Admin role model uses `crystal_admin_memberships`; legacy helpers are compatibility wrappers in the migration.
 - [x] Junior Admin access remains permission-based and enforced by database functions/RLS.
 - [x] AAL2 remains required for sensitive admin actions.
 - [x] Direct authenticated financial table writes are revoked by the incremental migration.
-- [x] Manual and automatic modes are represented independently per transaction category; automatic mode is provider-gated and off by default.
+- [x] Manual and automatic modes are represented independently; manual is always enabled, eight-division allocation is automatic, and external payment automation is provider-gated.
 - [x] Distribution approval is separated from payout confirmation.
 - [x] Payout confirmation is idempotent and writes ledger/audit records in the same transaction.
 - [x] No financial records are deleted, overwritten, reset, or automatically adjusted.
 - [ ] Live database migration has not been applied.
-- [ ] The KES 7 trillion deposit and KES 7 withdrawal remain unresolved pending independent evidence.
+- [x] Historical KES 7 trillion deposit and KES 7 withdrawal are preserved unchanged; neither is automatically credited/debited or marked paid.
 - [x] Daraja STK Push initiation and callback verification Edge Function source is included; callback verification does not automatically approve or credit deposits.
 - [ ] Daraja credentials, public callback URL and Edge Function deployment still need to be configured and sandbox-tested.
 - [ ] Daily accrual scheduler/cron must be deployed and verified before daily income is considered current.
