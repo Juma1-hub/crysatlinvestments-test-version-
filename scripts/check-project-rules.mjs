@@ -17,6 +17,10 @@ const migrationPath = 'supabase/migrations/202611240001_live_security_and_proces
 const migration = fs.readFileSync(path.join(root, migrationPath), 'utf8');
 const workflowMigration = fs.readFileSync(path.join(root, 'supabase/migrations/202611250001_complete_financial_review_and_payout_workflows.sql'), 'utf8');
 const financialUi = fs.readFileSync(path.join(root, 'components/AdminFinancialRequests.tsx'), 'utf8');
+const reconciliationMigration = fs.readFileSync(path.join(root, 'supabase/migrations/202611250002_approved_deposit_reconciliation_and_provider_gates.sql'), 'utf8');
+const migrationFiles = fs.readdirSync(path.join(root, 'supabase/migrations')).filter(name => name.endsWith('.sql'));
+const migrationVersions = migrationFiles.map(name => name.split('_', 1)[0]);
+const migrationVersionsUnique = new Set(migrationVersions).size === migrationVersions.length;
 const gitignore = fs.readFileSync(path.join(root, '.gitignore'), 'utf8');
 const middleware = fs.readFileSync(path.join(root, 'middleware.ts'), 'utf8');
 const nextConfig = fs.readFileSync(path.join(root, 'next.config.ts'), 'utf8');
@@ -67,6 +71,12 @@ const checks = [
   ['Cloudflare edge redirects HTTP to HTTPS', fs.readFileSync(path.join(root, 'cloudflare/src/index.mjs'), 'utf8').includes('Response.redirect(url.toString(), 301)')],
   ['Cloudflare Durable Object rate limits password, signup and recovery endpoints', fs.existsSync(path.join(root, 'cloudflare/src/index.mjs')) && fs.existsSync(path.join(root, 'cloudflare/wrangler.toml.example')) && fs.readFileSync(path.join(root, 'cloudflare/src/index.mjs'), 'utf8').includes('password-recovery')],
   ['Cloudflare rate limiter excludes refresh-token renewal', fs.readFileSync(path.join(root, 'cloudflare/src/index.mjs'), 'utf8').includes('grant_type') && fs.readFileSync(path.join(root, 'cloudflare/tests/rate-limiter.test.mjs'), 'utf8').includes('refresh_token')],
+  ['Supabase migration versions are unique', migrationVersionsUnique],
+  ['Previously approved deposits have an explicit idempotent reconciliation RPC', reconciliationMigration.includes('admin_reconcile_approved_deposit_v2') && reconciliationMigration.includes('Only a previously reviewed and approved deposit can be reconciled') && reconciliationMigration.includes('on conflict(source_type,source_id,entry_type)')],
+  ['Approved-deposit reconciliation preserves original approval fields', !/update public\.deposit_requests[\s\S]*?set status/.test(reconciliationMigration) && reconciliationMigration.includes('approved_deposit_reconciled')],
+  ['Approved-deposit reconciliation requires Supa Admin MFA', reconciliationMigration.includes('crystal_is_supa_admin()') && reconciliationMigration.includes('crystal_require_admin_mfa()')],
+  ['Admin can reconcile previously approved deposits from the financial queue', financialUi.includes('admin_reconcile_approved_deposit_v2') && financialUi.includes('Verify / complete posting')],
+  ['Automatic processing can be enabled only after recent provider verification', reconciliationMigration.includes("p.verified_at>now()-interval '24 hours'") && reconciliationMigration.includes('Manual verification must remain enabled')],
 ];
 let failed = 0;
 for (const [label, ok] of checks) {

@@ -54,6 +54,24 @@ export default function AdminFinancialRequests({ kind }: { kind: "deposit" | "wi
     await load();
   }
 
+  async function reconcileApprovedDeposit(row: RequestRow) {
+    const note = window.prompt("Explain the evidence and reason for reconciling this previously approved deposit (at least 20 characters):");
+    if (!note || note.trim().length < 20) { setMessage("A detailed reconciliation note is required."); return; }
+    if (!window.confirm(`Verify and complete the ledger posting and eight-division allocations for the previously approved KES ${Number(row.amount).toLocaleString()} deposit? This will not create a duplicate credit.`)) return;
+    const db = getSupabaseBrowserClient(); if (!db) { setMessage("Unable to connect to the account service."); return; }
+    setBusyId(row.id); setMessage("");
+    const { data: assurance, error: assuranceError } = await db.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (assuranceError || assurance?.currentLevel !== "aal2") {
+      setMessage("Complete multi-factor authentication, then retry this reconciliation."); setBusyId(null); return;
+    }
+    const { data, error } = await db.rpc("admin_reconcile_approved_deposit_v2", {
+      p_request_id: row.id, p_reconciliation_note: note.trim(),
+    });
+    if (error) setMessage(error.message);
+    else setMessage(`Approved deposit verified. ${Number((data as {new_allocations_created?:number})?.new_allocations_created || 0)} new division allocations created; no duplicate ledger credit was made.`);
+    setBusyId(null); await load();
+  }
+
   async function confirmPayout(row: RequestRow) {
     const reference = window.prompt("Enter the M-Pesa/bank transaction reference after independently confirming successful payment:");
     if (!reference || reference.trim().length < 6) { setMessage("A valid provider transaction reference is required."); return; }
@@ -102,7 +120,7 @@ export default function AdminFinancialRequests({ kind }: { kind: "deposit" | "wi
     {loading ? <div className="admin-empty">Loading requests…</div> : rows.length === 0 ? <div className="admin-empty">No requests to display.</div> : <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Request</th><th>Investor</th><th>Amount</th><th>{kind === "deposit" ? "Payment details" : "Withdrawal destination"}</th><th>Status</th><th>Submitted</th><th>Reviewed</th><th>Decision</th></tr></thead><tbody>{rows.map(row => {
       const isPending = ["pending", "submitted", "under review", "under_review", "processing"].includes(String(row.status).toLowerCase());
       const isApproved = String(row.status).toLowerCase() === "approved";
-      return <tr key={row.id}><td><small>{row.id}</small></td><td><small>{row.investor_id}</small></td><td><b>{row.currency} {Number(row.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></td><td>{kind === "deposit" ? <>{row.payment_method || "—"}<small>{row.payment_reference || "No reference"}{row.sender_name ? ` · ${row.sender_name}` : ""}{row.provider_status ? ` · Provider: ${row.provider_status}` : ""}{row.provider_receipt ? ` · Receipt: ${row.provider_receipt}` : ""}</small></> : <>{destination(row)}{row.payout_provider_reference && <small>Paid reference: {row.payout_provider_reference}</small>}</>}</td><td><span className={`admin-pill ${String(row.status || "").toLowerCase().replaceAll(" ", "-")}`}>{row.status}</span></td><td>{row.created_at ? new Date(row.created_at).toLocaleString() : "—"}</td><td>{row.reviewed_at ? new Date(row.reviewed_at).toLocaleString() : "—"}</td><td>{isPending ? <div className="admin-row-actions"><button className="admin-primary" type="button" disabled={!!busyId} onClick={() => void review(row, "approved")}>{busyId === row.id ? "Saving…" : <><CheckCircle2 size={14}/> Approve</>}</button><button className="admin-secondary" type="button" disabled={!!busyId} onClick={() => void review(row, "rejected")}><XCircle size={14}/> Reject</button></div> : kind === "withdrawal" && isApproved ? <div className="admin-row-actions"><button className="admin-primary" type="button" disabled={!!busyId} onClick={() => void confirmPayout(row)}>Confirm payout</button><button className="admin-secondary" type="button" disabled={!!busyId} onClick={() => void cancelApprovedWithdrawal(row)}>Cancel</button></div> : "—"}</td></tr>;
+      return <tr key={row.id}><td><small>{row.id}</small></td><td><small>{row.investor_id}</small></td><td><b>{row.currency} {Number(row.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></td><td>{kind === "deposit" ? <>{row.payment_method || "—"}<small>{row.payment_reference || "No reference"}{row.sender_name ? ` · ${row.sender_name}` : ""}{row.provider_status ? ` · Provider: ${row.provider_status}` : ""}{row.provider_receipt ? ` · Receipt: ${row.provider_receipt}` : ""}</small></> : <>{destination(row)}{row.payout_provider_reference && <small>Paid reference: {row.payout_provider_reference}</small>}</>}</td><td><span className={`admin-pill ${String(row.status || "").toLowerCase().replaceAll(" ", "-")}`}>{row.status}</span></td><td>{row.created_at ? new Date(row.created_at).toLocaleString() : "—"}</td><td>{row.reviewed_at ? new Date(row.reviewed_at).toLocaleString() : "—"}</td><td>{isPending ? <div className="admin-row-actions"><button className="admin-primary" type="button" disabled={!!busyId} onClick={() => void review(row, "approved")}>{busyId === row.id ? "Saving…" : <><CheckCircle2 size={14}/> Approve</>}</button><button className="admin-secondary" type="button" disabled={!!busyId} onClick={() => void review(row, "rejected")}><XCircle size={14}/> Reject</button></div> : kind === "deposit" && isApproved ? <div className="admin-row-actions"><button className="admin-primary" type="button" disabled={!!busyId} onClick={() => void reconcileApprovedDeposit(row)}>Verify / complete posting</button></div> : kind === "withdrawal" && isApproved ? <div className="admin-row-actions"><button className="admin-primary" type="button" disabled={!!busyId} onClick={() => void confirmPayout(row)}>Confirm payout</button><button className="admin-secondary" type="button" disabled={!!busyId} onClick={() => void cancelApprovedWithdrawal(row)}>Cancel</button></div> : "—"}</td></tr>;
     })}</tbody></table></div>}
   </section>;
 }
