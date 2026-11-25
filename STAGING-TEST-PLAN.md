@@ -23,7 +23,7 @@ Run these tests only on a protected Vercel Preview deployment connected to a res
 
 ## C. Divisions and deposit approval
 
-1. Apply migrations 24 and 25 to the staging clone in order, then run all matching verification SQL.
+1. Apply migrations 24, 25 and 26 to the staging clone in order, then run all matching verification SQL.
 2. Confirm exactly eight canonical divisions are Active, KES-only, and each has a terms version and non-empty risk disclosure.
 3. Submit a new KES 800.00 bank-transfer/manual-reference deposit from a staging investor using a unique client request ID.
 4. Confirm the request appears in the admin Deposit approvals queue and is not credited before approval.

@@ -18,7 +18,7 @@
 ## Supabase migration order
 The expected migration sequence for this project is:
 1. `202611110001_initial_investor_profiles.sql`
-2. `202611110002_referral_program.sql`
+2. `20261111000230_referral_program.sql`
 3. `202611110003_central_backend_and_referral_admin.sql`
 4. `202611120004_interest_support_and_admin_controls.sql`
 5. `202611120005_contact_admin_security.sql`

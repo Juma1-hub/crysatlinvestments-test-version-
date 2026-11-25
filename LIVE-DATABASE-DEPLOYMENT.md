@@ -68,7 +68,7 @@ The Next.js middleware returns 404 for public website, login and registration ro
 2. Review the current live schema and the migration SQL in a non-production copy first.
 3. Preserve the previously approved KES 7 trillion deposit and KES 7 withdrawal rows. The user confirms the deposit was manually approved; do not automatically credit it again or invent a payout for the withdrawal. Use a separately authorised, audited reconciliation only if the ledger evidence requires it.
 4. Review all `SECURITY DEFINER` function definitions, RLS policies and grants against the actual live schema.
-5. Test `202611240001_live_security_and_processing_controls.sql` followed by `202611250001_complete_financial_review_and_payout_workflows.sql` on a clone of the live database. Do not run fresh-install SQL against the live database.
+5. Test `202611240001_live_security_and_processing_controls.sql` followed by `202611250001_complete_financial_review_and_payout_workflows.sql` and `202611250002_approved_deposit_reconciliation_and_provider_gates.sql` on a clone of the live database. Do not run fresh-install SQL against the live database.
 6. Apply only after the user explicitly approves the reviewed migrations and preflight checks pass.
 7. Run both verification scripts under `supabase/verification/` and inspect every result.
 8. Run the frontend production build and test authentication, MFA, investor isolation, admin permission boundaries, deposit approval/allocation idempotency, withdrawal reservation/payout/cancellation, KES-only inserts, duplicate provider events, daily accrual and audit logs.

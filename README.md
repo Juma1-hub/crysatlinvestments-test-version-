@@ -4,14 +4,22 @@ This repository contains the active Next.js 15 / React 19 application, Supabase 
 
 ## Important
 
-The source includes manual deposit approval with idempotent eight-division allocation, withdrawal approval/reservation, separately verified payout confirmation and cancellation. These workflows are delivered in incremental migration `202611250001_complete_financial_review_and_payout_workflows.sql`; they must be tested on a database clone before any live deployment. Automatic M-Pesa/bank processing remains gated until the corresponding provider integration is deployed and verified. Do not use fresh-install SQL against an existing live database.
+The source includes manual deposit approval with idempotent eight-division allocation, withdrawal approval/reservation, separately verified payout confirmation and cancellation. These workflows are delivered in incremental migrations `202611250001_complete_financial_review_and_payout_workflows.sql` and `202611250002_approved_deposit_reconciliation_and_provider_gates.sql`; they must be tested on a database clone before any live deployment. The second migration adds a Super-Admin-only, MFA-protected, idempotent reconciliation action for deposits already marked approved, without changing their original approval fields. Automatic M-Pesa/bank processing remains gated until the corresponding provider integration is deployed and verified. Do not use fresh-install SQL against an existing live database.
+
+## Financial workflow additions in the continuation release
+
+- New deposit requests can be manually approved with AAL2; approval posts one KES ledger credit and creates eight equal active allocations in one transaction.
+- A previously approved deposit can be reconciled separately by the active Supa Admin with AAL2 and a detailed note. The reconciliation checks existing ledger/allocation records and is idempotent; it does not rewrite the original request approval fields or run automatically.
+- Withdrawals are approved as reservations, then marked paid only by a separate manually verified payout action. Cancellation releases an unpaid reservation without posting a debit.
+- Automatic internal allocation across the eight divisions is mandatory. External automatic deposits/withdrawals remain disabled until a trusted provider adapter is deployed and recently verified; manual review remains enabled.
+- Apply incremental migrations 24, 25 and 26 in order on a staging clone. Migration 26 adds the approved-deposit reconciliation action and provider-readiness gate.
 
 ## Main application
 
 - `app/` — public website, registration, login, investor and admin routes.
 - `components/` — investor portal and admin modules.
 - `lib/supabase.ts` — browser Supabase client using only the publishable/anon key.
-- `supabase/migrations/` — ordered migration history and the new live security baseline.
+- `supabase/migrations/` — ordered migration history and the live security baseline. Migration versions are unique; the referral migration has a distinct timestamp so the Supabase CLI can order the chain.
 - `supabase/verification/` — read-only post-deployment verification.
 - `supabase/schedules/` — protected daily accrual scheduler setup and verification guide.
 - `public/` — PWA manifest assets, service worker and offline page.

@@ -14,7 +14,7 @@
 ## Migrations
 Run in order in Supabase SQL Editor:
 1. `202611110001_initial_investor_profiles.sql` (already completed)
-2. `202611110002_referral_program.sql` (already completed)
+2. `20261111000230_referral_program.sql` (confirm against the actual database migration history before applying)
 3. `202611110003_central_backend_and_referral_admin.sql` (must be run if not already completed)
 4. `202611120004_interest_support_and_admin_controls.sql`
 

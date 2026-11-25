@@ -53,8 +53,9 @@ Apply in order on the clone:
 
 1. `supabase/migrations/202611240001_live_security_and_processing_controls.sql`
 2. `supabase/migrations/202611250001_complete_financial_review_and_payout_workflows.sql`
+3. `supabase/migrations/202611250002_approved_deposit_reconciliation_and_provider_gates.sql`
 
-Then run both relevant verification scripts in `supabase/verification/` and `supabase/verification/VERIFY_FINANCIAL_WORKFLOWS_20261125.sql`.
+Then run `VERIFY_LIVE_SECURITY_BASELINE_20261125.sql`, `VERIFY_FINANCIAL_WORKFLOWS_20261125.sql`, and `VERIFY_APPROVED_DEPOSIT_RECONCILIATION_20261125.sql` from `supabase/verification/`.
 
 ## Payment integration boundary
 

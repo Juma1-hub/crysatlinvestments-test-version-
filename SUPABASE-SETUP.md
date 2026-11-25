@@ -28,6 +28,7 @@ Before changing the live database:
 4. Apply the incremental migrations to the clone in this order:
    - `supabase/migrations/202611240001_live_security_and_processing_controls.sql`
    - `supabase/migrations/202611250001_complete_financial_review_and_payout_workflows.sql`
+   - `supabase/migrations/202611250002_approved_deposit_reconciliation_and_provider_gates.sql`
 5. Run the matching read-only verification SQL in `supabase/verification/`.
 6. Test investor isolation, admin permissions, manual deposit approval, eight-division allocations, withdrawal reservation, manual payout confirmation/cancellation, daily accrual and audit records.
 7. Only after staging passes and the user explicitly approves, schedule the live migration.
